@@ -1,6 +1,20 @@
 # Mini LMS (Learning Management System)
 
-A mini web application for managing student-parent information, class scheduling, and subscription tracking.
+A mini web application for managing student-parent information, class scheduling, and subscription tracking for small tutoring centers or educational institutions.
+
+## Description
+
+Mini LMS provides a simple interface to manage:
+- **Parents & Students**: Create parent accounts and register students linked to parents
+- **Classes**: Create and schedule classes with weekly timetable view
+- **Registrations**: Enroll students in classes with automatic validation
+- **Subscriptions**: Track student learning packages (total sessions, used sessions, remaining)
+
+The system enforces business rules automatically:
+- Prevents over-enrollment when class is full
+- Detects schedule conflicts (same day/time)
+- Validates subscription status before registration
+- Handles cancellation with session refund
 
 ## Features
 
@@ -11,10 +25,62 @@ A mini web application for managing student-parent information, class scheduling
 
 ## Tech Stack
 
-- **Backend**: Node.js, Express.js, MongoDB (Mongoose)
+- **Backend**: Node.js, Express.js, MongoDB (Mongoose ODM)
 - **Frontend**: React.js, Vite
-- **Database**: MongoDB
+- **Database**: MongoDB 7
 - **DevOps**: Docker, Docker Compose
+
+## Database Schema
+
+### Parents
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Unique identifier |
+| name | String | Parent's full name (required) |
+| phone | String | Contact phone (required) |
+| email | String | Email address |
+| createdAt | Date | Record creation timestamp |
+
+### Students
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Unique identifier |
+| name | String | Student's full name (required) |
+| dob | Date | Date of birth |
+| gender | String | male/female/other |
+| current_grade | String | Current school grade |
+| parent_id | ObjectId | Reference to parent (required) |
+
+### Classes
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Unique identifier |
+| name | String | Class name (required) |
+| subject | String | Subject matter (required) |
+| day_of_week | Number | 1-7 (Monday=1, Sunday=7) |
+| time_slot | String | e.g., "09:00-10:30" |
+| teacher_name | String | Teacher's name (required) |
+| max_students | Number | Maximum enrollment (default: 20) |
+
+### ClassRegistrations
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Unique identifier |
+| class_id | ObjectId | Reference to class |
+| student_id | ObjectId | Reference to student |
+| registeredAt | Date | Registration timestamp |
+| status | String | active/cancelled |
+
+### Subscriptions
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Unique identifier |
+| student_id | ObjectId | Reference to student |
+| package_name | String | Package name (required) |
+| start_date | Date | Package start date |
+| expiry_date | Date | Package expiry date (required) |
+| total_sessions | Number | Total sessions in package |
+| used_sessions | Number | Sessions already used |
 
 ## Project Structure
 
@@ -25,6 +91,7 @@ A mini web application for managing student-parent information, class scheduling
 │   │   ├── models/        # Mongoose models
 │   │   ├── routes/       # API routes
 │   │   ├── controllers/  # Route controllers
+│   │   ├── seed.js       # Database seeder
 │   │   └── index.js       # Entry point
 │   ├── package.json
 │   └── Dockerfile
@@ -33,7 +100,8 @@ A mini web application for managing student-parent information, class scheduling
 │   │   ├── components/   # React components
 │   │   ├── pages/        # Page components
 │   │   ├── api/          # API client
-│   │   └── App.jsx        # Main app component
+│   │   ├── App.jsx        # Main app component
+│   │   └── index.css      # Global styles
 │   ├── package.json
 │   ├── vite.config.js
 │   └── Dockerfile
@@ -47,6 +115,7 @@ A mini web application for managing student-parent information, class scheduling
 ### Prerequisites
 
 - Docker and Docker Compose installed
+- MongoDB port 27200 available
 
 ### Run with Docker Compose
 
@@ -61,12 +130,18 @@ docker-compose up -d
 Services will be available at:
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:3000
-- **MongoDB**: localhost:27200
+- **MongoDB**: localhost:27200 (for Studio 3T, etc.)
 
 ### Stop services
 
 ```bash
 docker-compose down
+```
+
+### Seed Database with Sample Data
+
+```bash
+docker-compose exec backend npm run seed
 ```
 
 ## Local Development (Without Docker)
@@ -89,31 +164,44 @@ npm run dev
 
 ### MongoDB
 
-Make sure MongoDB is running locally or update `MONGODB_URI` in backend.
+Make sure MongoDB is running locally on port 27200.
 
 ## API Endpoints
 
 ### Parents
-- `POST /api/parents` - Create parent
-- `GET /api/parents/:id` - Get parent details
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/parents | Create parent |
+| GET | /api/parents/:id | Get parent details |
 
 ### Students
-- `POST /api/students` - Create student
-- `GET /api/students/:id` - Get student details (with parent info)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/students | List all students |
+| POST | /api/students | Create student |
+| GET | /api/students/:id | Get student details (with parent info) |
 
 ### Classes
-- `POST /api/classes` - Create class
-- `GET /api/classes` - List all classes
-- `GET /api/classes?day=:weekday` - List classes by day (1-7)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/classes | Create class |
+| GET | /api/classes | List all classes |
+| GET | /api/classes?day=:weekday | List classes by day (1-7) |
 
 ### Class Registrations
-- `POST /api/classes/:class_id/register` - Register student for class
-- `DELETE /api/registrations/:id` - Cancel registration
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/classes/:class_id/register | Register student for class |
+| GET | /api/registrations/student/:student_id | Get student's registrations |
+| DELETE | /api/registrations/:id | Cancel registration |
 
 ### Subscriptions
-- `POST /api/subscriptions` - Create subscription
-- `GET /api/subscriptions/:id` - Get subscription status
-- `PATCH /api/subscriptions/:id/use` - Use one session
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/subscriptions | Create subscription |
+| GET | /api/subscriptions/:id | Get subscription status |
+| GET | /api/subscriptions/student/:student_id | Get student's subscriptions |
+| PATCH | /api/subscriptions/:id/use | Use one session |
 
 ## API Demo with curl
 
@@ -145,13 +233,27 @@ curl -X POST http://localhost:3000/api/classes/<class_id>/register \
 
 # Use session
 curl -X PATCH http://localhost:3000/api/subscriptions/<subscription_id>/use
+
+# Cancel registration
+curl -X DELETE http://localhost:3000/api/registrations/<registration_id>
+
+# List classes by day
+curl "http://localhost:3000/api/classes?day=1"
 ```
 
 ## Business Rules
 
-1. **Max Students**: Cannot register if class is full
-2. **Schedule Conflict**: Student cannot register for 2 classes at the same time on the same day
+1. **Max Students**: Cannot register if class has reached max_students limit
+2. **Schedule Conflict**: Student cannot register for 2 classes at the same time_slot on the same day_of_week
 3. **Subscription Check**:
-   - Subscription must not be expired
-   - Must have remaining sessions
-4. **Cancellation**: Cancelling a registration refunds one session
+   - expiry_date must be in the future
+   - used_sessions must be less than total_sessions
+4. **Cancellation**: Cancelling a registration refunds one session (decrements used_sessions)
+
+## Connecting to MongoDB
+
+Use Studio 3T or any MongoDB client:
+- **Host**: localhost
+- **Port**: 27200
+- **Database**: mini-lms
+- **Authentication**: None
