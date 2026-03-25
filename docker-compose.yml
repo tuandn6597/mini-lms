@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: mini-lms-mongodb
+    ports:
+      - "27200:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - mini-lms-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mini-lms-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/mini-lms
+      - PORT=3000
+    depends_on:
+      - mongodb
+    networks:
+      - mini-lms-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mini-lms-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - mini-lms-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  mini-lms-network:
+    driver: bridge
