@@ -51,7 +51,8 @@ export default function ClassRegistration() {
       await api.registerForClass(selectedClass, selectedStudent);
       setMessage({ type: 'success', text: 'Student registered successfully!' });
       setSelectedClass('');
-      setSelectedStudent('');
+      // Refresh registrations for selected student
+      await handleStudentChange(selectedStudent);
     } catch (error) {
       setMessage({ type: 'error', text: error.message });
     }
@@ -61,7 +62,8 @@ export default function ClassRegistration() {
     try {
       await api.cancelRegistration(registrationId);
       setMessage({ type: 'success', text: 'Registration cancelled successfully!' });
-      loadData();
+      // Refresh registrations for selected student
+      await handleStudentChange(selectedStudent);
     } catch (error) {
       setMessage({ type: 'error', text: error.message });
     }
@@ -81,8 +83,12 @@ export default function ClassRegistration() {
     }
   };
 
-  const getClassInfo = (classId) => {
-    return classes.find(c => c._id === classId);
+  const getClassInfo = (classItem) => {
+    // classItem can be either an object (populated) or just an ID string
+    if (typeof classItem === 'object' && classItem !== null) {
+      return classItem;
+    }
+    return classes.find(c => c._id === classItem);
   };
 
   return (
